@@ -1,0 +1,7 @@
+*.doc
+*.docx
+*.zip
+*.txt
+docx_extracted/
+tmp_extract/
+*.html

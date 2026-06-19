@@ -513,11 +513,9 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
             {{QUESTIONS_DATA}}
         ];
         let currentQuestionIndex = 0;
-        let currentPreamble = '';
+        let currentPreamble = null;
         const synth = window.speechSynthesis;
-        let utterance = new SpeechSynthesisUtterance();
-        utterance.lang = 'zh-TW';
-        utterance.rate = 0.9;
+        let utterance = null;
         let voices = [];
         let preambleEl = document.getElementById('preamble-text');
         let questionEl = document.getElementById('question-text');
@@ -532,6 +530,12 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
         const settingsToggleBtn = document.getElementById('settings-toggle-btn');
         const settingsPanel = document.getElementById('settings-panel');
 
+        const playIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.596 8.697l-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/></svg>`;
+        const stopIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5z"/></svg>`;
+
+        let activeSequence = [];
+        let activeSequenceIndex = -1;
+
         function populateVoiceList() {
             voices = synth.getVoices().filter(voice => voice.lang.startsWith('zh'));
             voiceSelectEl.innerHTML = '';
@@ -540,26 +544,89 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
             let idx = voices.findIndex(v => v.name.includes('Yating') && v.lang === 'zh-TW');
             if (idx === -1) idx = voices.findIndex(v => v.name === 'Google 國語（臺灣）');
             if (idx === -1) idx = 0;
-            if (voices[idx]) { utterance.voice = voices[idx]; voiceSelectEl.selectedIndex = idx; }
+            if (voices[idx]) { voiceSelectEl.selectedIndex = idx; }
         }
         if (synth.onvoiceschanged !== undefined) { synth.onvoiceschanged = populateVoiceList; }
 
         function speak(text) {
             synth.cancel();
-            utterance.text = text;
-            utterance.rate = parseFloat(speedControl.value);
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'zh-TW';
+            u.rate = parseFloat(speedControl.value);
             const i = voiceSelectEl.value;
-            if (voices[i]) utterance.voice = voices[i];
-            synth.speak(utterance);
+            if (voices[i]) u.voice = voices[i];
+            utterance = u;
+            synth.speak(u);
         }
-        function speakAndHighlight(text, element) {
+
+        function stopSequence() {
+            activeSequence = [];
+            activeSequenceIndex = -1;
+            synth.cancel();
             document.querySelectorAll('.speaking').forEach(el => el.classList.remove('speaking'));
-            element.classList.add('speaking');
-            const cleanup = () => { element.classList.remove('speaking'); utterance.onend = null; utterance.onerror = null; };
-            utterance.onend = cleanup;
-            utterance.onerror = cleanup;
-            speak(text);
+            updateReplayButtonState(false);
         }
+
+        function updateReplayButtonState(isPlaying) {
+            if (isPlaying) {
+                replayBtn.innerHTML = stopIcon + '<span>停止</span>';
+                replayBtn.title = "停止唸讀";
+                replayBtn.classList.remove('btn-primary');
+                replayBtn.classList.add('btn-secondary');
+            } else {
+                replayBtn.innerHTML = playIcon + '<span>唸題目</span>';
+                replayBtn.title = "唸題目";
+                replayBtn.classList.remove('btn-secondary');
+                replayBtn.classList.add('btn-primary');
+            }
+        }
+
+        function playNextInSequence() {
+            if (activeSequenceIndex < 0 || activeSequenceIndex >= activeSequence.length) {
+                stopSequence();
+                return;
+            }
+            const item = activeSequence[activeSequenceIndex];
+            document.querySelectorAll('.speaking').forEach(el => el.classList.remove('speaking'));
+            item.element.classList.add('speaking');
+            
+            item.element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            const u = new SpeechSynthesisUtterance(item.text);
+            u.lang = 'zh-TW';
+            u.rate = parseFloat(speedControl.value);
+            const i = voiceSelectEl.value;
+            if (voices[i]) u.voice = voices[i];
+
+            u.onend = () => {
+                activeSequenceIndex++;
+                playNextInSequence();
+            };
+            u.onerror = () => {
+                activeSequenceIndex++;
+                playNextInSequence();
+            };
+            utterance = u;
+            synth.speak(u);
+        }
+
+        function speakAndHighlight(text, element) {
+            stopSequence();
+            element.classList.add('speaking');
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'zh-TW';
+            u.rate = parseFloat(speedControl.value);
+            const i = voiceSelectEl.value;
+            if (voices[i]) u.voice = voices[i];
+
+            const cleanup = () => { element.classList.remove('speaking'); u.onend = null; u.onerror = null; };
+            u.onend = cleanup;
+            u.onerror = cleanup;
+            
+            utterance = u;
+            synth.speak(u);
+        }
+
         function renderPreamble(text) {
             preambleEl.innerHTML = '';
             if (!text) { preambleEl.style.display = 'none'; return; }
@@ -575,10 +642,23 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
                 preambleEl.appendChild(pEl);
             });
         }
+
+        function getActivePreamble(index) {
+            const q = questions[index];
+            if (q.preamble) return q.preamble;
+            for (let i = index - 1; i >= 0; i--) {
+                const prevQ = questions[i];
+                if (prevQ.section !== q.section) break;
+                if (prevQ.preamble) return prevQ.preamble;
+            }
+            return null;
+        }
+
         function renderQuestion(index) {
             const q = questions[index];
-            if (q.preamble !== currentPreamble) { renderPreamble(q.preamble); currentPreamble = q.preamble; }
-            else if (!q.preamble && currentPreamble) { renderPreamble(null); currentPreamble = null; }
+            const activePreamble = getActivePreamble(index);
+            if (activePreamble !== currentPreamble) { renderPreamble(activePreamble); currentPreamble = activePreamble; }
+            
             questionEl.innerHTML = '';
             q.question.split('\n').flatMap(line => line.match(/[^。？！…，,]+([。？！…，,]|…{2,})?/g) || [line]).forEach(sText => {
                 if (sText.trim() === '') return;
@@ -602,21 +682,51 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
             prevBtn.disabled = index === 0;
             nextBtn.disabled = index === questions.length - 1;
         }
+
         function speakCurrentQuestion() {
-            synth.cancel();
-            document.querySelectorAll('.speaking').forEach(el => el.classList.remove('speaking'));
+            if (activeSequence.length > 0) {
+                stopSequence();
+                return;
+            }
             const q = questions[currentQuestionIndex];
-            let text = '';
-            if (q.preamble && q.preamble !== currentPreamble) text += q.preamble + '。';
-            text += q.question;
-            if (q.options) text += '。' + q.options.join('。');
-            speak(text);
+            const seq = [];
+            if (q.preamble) {
+                preambleEl.querySelectorAll('span').forEach(span => {
+                    seq.push({ text: span.textContent, element: span });
+                });
+            }
+            questionEl.querySelectorAll('span.non-option').forEach(span => {
+                seq.push({ text: span.textContent, element: span });
+            });
+            if (q.options) {
+                optionsEl.querySelectorAll('li.option-item').forEach(li => {
+                    seq.push({ text: li.textContent, element: li });
+                });
+            }
+            if (seq.length === 0) return;
+            activeSequence = seq;
+            activeSequenceIndex = 0;
+            updateReplayButtonState(true);
+            playNextInSequence();
         }
-        selectEl.addEventListener('change', e => { currentQuestionIndex = parseInt(e.target.value); synth.cancel(); renderQuestion(currentQuestionIndex); });
-        prevBtn.addEventListener('click', () => { if (currentQuestionIndex > 0) { currentQuestionIndex--; synth.cancel(); renderQuestion(currentQuestionIndex); } });
-        nextBtn.addEventListener('click', () => { if (currentQuestionIndex < questions.length - 1) { currentQuestionIndex++; synth.cancel(); renderQuestion(currentQuestionIndex); } });
+
+        selectEl.addEventListener('change', e => { currentQuestionIndex = parseInt(e.target.value); stopSequence(); renderQuestion(currentQuestionIndex); });
+        prevBtn.addEventListener('click', () => { if (currentQuestionIndex > 0) { currentQuestionIndex--; stopSequence(); renderQuestion(currentQuestionIndex); } });
+        nextBtn.addEventListener('click', () => { if (currentQuestionIndex < questions.length - 1) { currentQuestionIndex++; stopSequence(); renderQuestion(currentQuestionIndex); } });
         replayBtn.addEventListener('click', speakCurrentQuestion);
-        speedControl.addEventListener('input', e => { const s = parseFloat(e.target.value); utterance.rate = s; speedValue.textContent = s.toFixed(1) + 'x'; if (synth.speaking) speak(utterance.text); });
+        
+        speedControl.addEventListener('input', e => { 
+            const s = parseFloat(e.target.value); 
+            speedValue.textContent = s.toFixed(1) + 'x'; 
+            if (activeSequence.length > 0) {
+                synth.cancel();
+                playNextInSequence();
+            } else if (synth.speaking && utterance) {
+                const text = utterance.text;
+                synth.cancel();
+                speak(text);
+            }
+        });
         
         settingsToggleBtn.addEventListener('click', () => {
             settingsPanel.classList.toggle('collapsed');
