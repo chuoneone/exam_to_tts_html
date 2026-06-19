@@ -48,9 +48,9 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
 
 ---
 
-## 輸出 HTML 模板
+# HTML 模板
 
-將下方 `{{考卷名稱}}` 替換為實際考卷標題，`{{QUESTIONS_DATA}}` 替換為轉換後的 JS 物件陣列內容：
+請將下方模板中的 `{{考卷名稱}}` 替換為實際考卷標題，`{{QUESTIONS_DATA}}` 替換為轉換後的 JS 物件陣列內容：
 
 ```html
 <!DOCTYPE html>
@@ -103,8 +103,6 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
             display: flex;
             flex-direction: column;
         }
-        
-        /* Navbar */
         .navbar {
             display: flex;
             align-items: center;
@@ -126,8 +124,6 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
             align-items: center;
             gap: 0.75rem;
         }
-        
-        /* Pager inside Navbar */
         .nav-pager {
             display: flex;
             align-items: center;
@@ -147,20 +143,15 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
             align-items: center;
             justify-content: center;
             transition: all 0.2s;
-            box-shadow: none;
         }
         .nav-pager button:hover {
             background-color: var(--border);
             color: var(--text-main);
-            transform: none;
         }
         .nav-pager button:disabled {
             opacity: 0.3;
             cursor: not-allowed;
-            background: none;
         }
-        
-        /* Select wrappers */
         .select-wrapper {
             position: relative;
         }
@@ -178,7 +169,6 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
             cursor: pointer;
             outline: none;
             transition: border-color 0.2s;
-            width: auto;
             max-width: 180px;
         }
         .select-wrapper select:focus {
@@ -204,8 +194,6 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
         .select-q::after {
             right: 0.4rem;
         }
-        
-        /* Buttons */
         .btn-primary, .btn-secondary {
             display: flex;
             align-items: center;
@@ -217,7 +205,6 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
             cursor: pointer;
             transition: all 0.2s;
             border: none;
-            box-shadow: none;
         }
         .btn-primary {
             background-color: var(--primary);
@@ -238,8 +225,6 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
             color: var(--text-main);
             transform: translateY(-1px);
         }
-        
-        /* Settings panel */
         .settings-panel {
             background-color: var(--background);
             border-bottom: 1px solid var(--border);
@@ -308,8 +293,6 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
             color: var(--text-main);
             min-width: 2.5rem;
         }
-        
-        /* Quiz Area */
         #quiz-area {
             padding: 1.25rem;
             display: flex;
@@ -376,8 +359,6 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
             text-decoration-thickness: 3px;
             background-color: var(--highlight-bg);
         }
-        
-        /* Footer */
         footer {
             display: flex;
             align-items: center;
@@ -388,14 +369,11 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
             flex-wrap: wrap;
             gap: 0.75rem;
         }
-
         .footer-text {
             font-size: 0.8rem;
             color: var(--text-muted);
             margin: 0;
         }
-        
-        /* Responsive */
         @media (max-width: 600px) {
             body {
                 padding: 0.25rem;
@@ -424,7 +402,7 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
                 font-size: 0.85rem;
             }
             .btn-primary span {
-                display: none; /* Hide text, keep icon on small mobile */
+                display: none;
             }
             #quiz-area {
                 padding: 0.75rem;
@@ -447,7 +425,6 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
 </head>
 <body>
     <div id="app-container">
-        <!-- Top Navbar -->
         <header class="navbar">
             <div class="nav-left">
                 <span class="logo">{{考卷名稱}}</span>
@@ -474,7 +451,6 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
             </div>
         </header>
 
-        <!-- Collapsible Settings Panel (Default collapsed) -->
         <div id="settings-panel" class="settings-panel collapsed">
             <div class="settings-grid">
                 <div class="control-group">
@@ -493,14 +469,12 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
             </div>
         </div>
 
-        <!-- Main Quiz Area -->
         <main id="quiz-area">
             <div id="preamble-text" style="display: none;"></div>
             <div class="question-header"><div id="question-text"></div></div>
             <ul id="options-list"></ul>
         </main>
 
-        <!-- Footer -->
         <footer>
             <p class="footer-text">© 2026 spedmix</p>
         </footer>
@@ -752,25 +726,3 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
 </body>
 </html>
 ```
-
----
-
-## 執行步驟
-
-1. **讀取考卷**：若為圖片，仔細辨識圖中所有文字（含表格、圖說）。
-2. **分析題型**：判斷每題屬於哪種題型（選擇、填充、問答、配合、閱讀題組等）。
-3. **逐題建立物件**：依上方規則填入 `section`、`displayId`、`preamble`、`question`、`options`。
-4. **組合 HTML**：將 `questions` 陣列填入模板的 `{{QUESTIONS_DATA}}` 位置，`{{考卷名稱}}` 填入考卷標題。
-5. **輸出**：在使用者的工作區（`c:\Users\pppch\OneDrive\桌面\tts\`）建立 HTML 檔案，命名格式為 `報讀_{{考卷名稱}}.html`。
-   - 若工作區路徑不確定，詢問使用者輸出位置。
-   - 完成後告知使用者檔案路徑。
-
----
-
-## 注意事項
-
-- `options` 內每個選項為獨立字串，例如 `"(A) 選項文字"`。
-- `preamble` 換行使用 `\n`，不使用 HTML 標籤。
-- 圖形辨識時，若有表格，以空格或換行盡量還原結構，並完整放入 `preamble`。
-- `section` 值依考卷題型命名，保持一致（例如全部選擇題統一用「單題」，閱讀題組統一用「閱讀題組」）。
-- 若題號（displayId）為數字，仍以字串格式儲存（加引號）。
