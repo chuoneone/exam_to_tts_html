@@ -507,6 +507,52 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
         let activeSequence = [];
         let activeSequenceIndex = -1;
 
+        function formatMathText(text) {
+            if (!text) return '';
+            return text
+                .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1)/($2)')
+                .replace(/\\times/g, ' × ')
+                .replace(/\\div/g, ' ÷ ')
+                .replace(/\\pm/g, ' ± ')
+                .replace(/\\le/g, ' ≤ ')
+                .replace(/\\ge/g, ' ≥ ')
+                .replace(/\\neq/g, ' ≠ ')
+                .replace(/\\approx/g, ' ≈ ')
+                .replace(/\\degree/g, '°')
+                .replace(/\^\\circ/g, '°')
+                .replace(/\\pi/g, 'π')
+                .replace(/\\theta/g, 'θ')
+                .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
+                .replace(/\$/g, '');
+        }
+
+        function cleanTextForTTS(text) {
+            if (!text) return '';
+            let cleaned = text;
+            cleaned = cleaned.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '$2分之$1');
+            cleaned = cleaned
+                .replace(/\\times/g, '乘以')
+                .replace(/\\div/g, '除以')
+                .replace(/×/g, '乘以')
+                .replace(/÷/g, '除以')
+                .replace(/\\pm/g, '正負')
+                .replace(/\\le/g, '小於或等於')
+                .replace(/\\ge/g, '大於或等於')
+                .replace(/\\neq/g, '不等於')
+                .replace(/\\approx/g, '約等於')
+                .replace(/\\degree/g, '度')
+                .replace(/\^\\circ/g, '度')
+                .replace(/\\pi/g, '圓周率')
+                .replace(/\\theta/g, '西塔')
+                .replace(/\\sqrt\{([^}]+)\}/g, '根號$1')
+                .replace(/=/g, '等於')
+                .replace(/＝/g, '等於');
+            cleaned = cleaned.replace(/(\d+):(\d+)/g, '$1比$2');
+            cleaned = cleaned.replace(/(\d+)：(\d+)/g, '$1比$2');
+            cleaned = cleaned.replace(/\$/g, '').replace(/\\/g, '');
+            return cleaned;
+        }
+
         function populateVoiceList() {
             voices = synth.getVoices().filter(voice => voice.lang.startsWith('zh'));
             voiceSelectEl.innerHTML = '';
@@ -521,7 +567,8 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
 
         function speak(text) {
             synth.cancel();
-            const u = new SpeechSynthesisUtterance(text);
+            const cleanText = cleanTextForTTS(text);
+            const u = new SpeechSynthesisUtterance(cleanText);
             u.lang = 'zh-TW';
             u.rate = parseFloat(speedControl.value);
             const i = voiceSelectEl.value;
@@ -563,7 +610,8 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
             
             item.element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-            const u = new SpeechSynthesisUtterance(item.text);
+            const cleanText = cleanTextForTTS(item.text);
+            const u = new SpeechSynthesisUtterance(cleanText);
             u.lang = 'zh-TW';
             u.rate = parseFloat(speedControl.value);
             const i = voiceSelectEl.value;
@@ -584,7 +632,8 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
         function speakAndHighlight(text, element) {
             stopSequence();
             element.classList.add('speaking');
-            const u = new SpeechSynthesisUtterance(text);
+            const cleanText = cleanTextForTTS(text);
+            const u = new SpeechSynthesisUtterance(cleanText);
             u.lang = 'zh-TW';
             u.rate = parseFloat(speedControl.value);
             const i = voiceSelectEl.value;
@@ -602,7 +651,8 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
             preambleEl.innerHTML = '';
             if (!text) { preambleEl.style.display = 'none'; return; }
             preambleEl.style.display = 'block';
-            text.split('\n').filter(p => p.trim() !== '').forEach(pText => {
+            const formattedText = formatMathText(text);
+            formattedText.split('\n').filter(p => p.trim() !== '').forEach(pText => {
                 const pEl = document.createElement('p');
                 (pText.match(/[^。？！…，,]+([。？！…，,]|…{2,})?/g) || [pText]).forEach(sText => {
                     const span = document.createElement('span');
@@ -631,7 +681,8 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
             if (activePreamble !== currentPreamble) { renderPreamble(activePreamble); currentPreamble = activePreamble; }
             
             questionEl.innerHTML = '';
-            q.question.split('\n').flatMap(line => line.match(/[^。？！…，,]+([。？！…，,]|…{2,})?/g) || [line]).forEach(sText => {
+            const formattedQuestion = formatMathText(q.question);
+            formattedQuestion.split('\n').flatMap(line => line.match(/[^。？！…，,]+([。檔案！…，,]|…{2,})?/g) || [line]).forEach(sText => {
                 if (sText.trim() === '') return;
                 const span = document.createElement('span');
                 span.className = 'non-option';
@@ -644,7 +695,7 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
                 q.options.forEach(optText => {
                     const li = document.createElement('li');
                     li.className = 'option-item';
-                    li.textContent = optText;
+                    li.textContent = formatMathText(optText);
                     li.addEventListener('click', e => speakAndHighlight(e.currentTarget.textContent, e.currentTarget));
                     optionsEl.appendChild(li);
                 });
