@@ -43,7 +43,19 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
    - 絕對不可擅自增減、修改題目或選項的文字。
    - 圖片中的表格或文字，請盡可能以文字換行或空格還原結構，並放入 `preamble` 中。
 
-7. **輸出檔案**：
+7. **數學式與符號處理**：
+   - 若考卷中包含數學算式、分數、乘除、比例或幾何符號，請將其統一轉換為標準 LaTeX 格式並以 `$` 符號包覆。
+   - **常見符號轉換對照**：
+     - 乘號：使用 `\times`（例如 `$2 \times 3$` 或 `$6 \times 5$`）
+     - 除號：使用 `\div`（例如 `$6 \div 2$` 或 `$6 \div 5$`）
+     - 分數：使用 `\frac{分子}{分母}`（例如 `$\frac{1}{2}$`）
+     - 次方：使用 `^` 或 `^{}`（例如 `$x^2$`、`$2^{n-1}$`）
+     - 比例：使用 `:`（例如 `$6:7$`）
+     - 根號：使用 `\sqrt{}`（例如 `$\sqrt{2}$`）
+     - 幾何符號：三角形用 `\triangle` 或 `\Delta`，角用 `\angle`，平行用 `\parallel`，垂直用 `\perp`，圓用 `\odot`
+   - **絕對不可直接輸出 `\times` 或 `\div` 等 LaTeX 原碼在最終顯示文字中而不加 `$`**，請確保所有數學式皆以 `$` 包覆，以利 HTML 模板中的解析器進行符號美化與語音報讀優化。
+
+8. **輸出檔案**：
    - 請將處理完的 `questions` 陣列，套入下方的 **[HTML 模板]**。
 
 ---
@@ -509,7 +521,7 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
 
         function formatMathText(text) {
             if (!text) return '';
-            return text
+            let formatted = text
                 .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1)/($2)')
                 .replace(/\\times/g, ' × ')
                 .replace(/\\div/g, ' ÷ ')
@@ -520,16 +532,38 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
                 .replace(/\\approx/g, ' ≈ ')
                 .replace(/\\degree/g, '°')
                 .replace(/\^\\circ/g, '°')
+                .replace(/\\\^/g, '^')
                 .replace(/\\pi/g, 'π')
                 .replace(/\\theta/g, 'θ')
-                .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
-                .replace(/\$/g, '');
+                .replace(/\\triangle/g, '△')
+                .replace(/\\Delta/g, '△')
+                .replace(/\\angle/g, '∠')
+                .replace(/\\parallel/g, '∥')
+                .replace(/\\perp/g, '⊥')
+                .replace(/\\sim/g, '∽')
+                .replace(/\\cong/g, '≅')
+                .replace(/\\odot/g, '⊙')
+                .replace(/\\sqrt\{([^}]+)\}/g, '√($1)');
+            
+            // Unicode superscript replacements for exponents
+            const superscripts = {
+                '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', 
+                '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹',
+                '+': '⁺', '-': '⁻', 'n': 'ⁿ', 'x': 'ˣ', 'y': 'ʸ'
+            };
+            formatted = formatted.replace(/\^\{?([0-9+-nxy]+)\}?/g, (match, p1) => {
+                return p1.split('').map(char => superscripts[char] || char).join('');
+            });
+            
+            formatted = formatted.replace(/\$/g, '');
+            return formatted;
         }
 
         function cleanTextForTTS(text) {
             if (!text) return '';
             let cleaned = text;
-            cleaned = cleaned.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '$2分之$1');
+            
+            // First handle math symbols
             cleaned = cleaned
                 .replace(/\\times/g, '乘以')
                 .replace(/\\div/g, '除以')
@@ -544,11 +578,32 @@ description: 將考卷（圖片或文字）轉換為報讀HTML檔，供特教或
                 .replace(/\^\\circ/g, '度')
                 .replace(/\\pi/g, '圓周率')
                 .replace(/\\theta/g, '西塔')
+                .replace(/\\triangle/g, '三角形')
+                .replace(/\\Delta/g, '三角形')
+                .replace(/\\angle/g, '角')
+                .replace(/\\parallel/g, '平行')
+                .replace(/\\perp/g, '垂直')
+                .replace(/\\sim/g, '相似於')
+                .replace(/\\cong/g, '全等於')
+                .replace(/\\odot/g, '圓')
                 .replace(/\\sqrt\{([^}]+)\}/g, '根號$1')
                 .replace(/=/g, '等於')
                 .replace(/＝/g, '等於');
-            cleaned = cleaned.replace(/(\d+):(\d+)/g, '$1比$2');
-            cleaned = cleaned.replace(/(\d+)：(\d+)/g, '$1比$2');
+
+            // Handle fractions (both LaTeX style and converted style)
+            cleaned = cleaned.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '$2分之$1');
+            cleaned = cleaned.replace(/\(([^)]+)\)\/\(([^)]+)\)/g, '$2分之$1');
+            cleaned = cleaned.replace(/(\d+)\/(\d+)/g, '$2分之$1');
+
+            // Handle exponents
+            cleaned = cleaned.replace(/\^\{([^}]+)\}/g, '的$1次方');
+            cleaned = cleaned.replace(/\^([a-zA-Z0-9]+)/g, '的$1次方');
+            cleaned = cleaned.replace(/的2次方/g, '平方');
+            cleaned = cleaned.replace(/的3次方/g, '立方');
+
+            // Replace ratio colons (e.g., 6:7, (a+b):(c-d), x:y) with "比"
+            cleaned = cleaned.replace(/([\d\w)]+)\s*[:：]\s*([\d\w(]+)/g, '$1比$2');
+
             cleaned = cleaned.replace(/\$/g, '').replace(/\\/g, '');
             return cleaned;
         }
