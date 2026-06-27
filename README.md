@@ -17,7 +17,25 @@ GitHub Repo：<https://github.com/chuoneone/exam_to_tts_html>
 
 ## 🛠️ 安裝
 
-### Windows PowerShell
+最簡單的方式：直接到 Codex、Antigravity 或 Claude Code，貼上這句：
+
+```text
+安裝這個 skill：https://github.com/chuoneone/exam_to_tts_html.git
+```
+
+或貼上：
+
+```text
+安裝這個 skill chuoneone/exam_to_tts_html.git
+```
+
+工具會自動把 skill 安裝到正確位置。
+
+### 手動安裝（備用）
+
+如果自動安裝失敗，再使用下面指令。
+
+#### Windows PowerShell
 
 直接貼上執行：
 
@@ -25,7 +43,7 @@ GitHub Repo：<https://github.com/chuoneone/exam_to_tts_html>
 New-Item -ItemType Directory -Force "$env:USERPROFILE\.codex\skills" | Out-Null; git clone https://github.com/chuoneone/exam_to_tts_html.git "$env:USERPROFILE\.codex\skills\exam_to_tts_html"
 ```
 
-### macOS / Linux
+#### macOS / Linux
 
 直接貼上執行：
 
