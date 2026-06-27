@@ -1,6 +1,8 @@
-# 考卷轉無障礙報讀 HTML 技能 (exam_to_tts_html)
+# 考卷轉無障礙報讀 HTML 技能 (`exam_to_tts_html`)
 
 這是一個專為特教及視障學生設計的 AI 助理客製化技能（Skill）。當向 AI 助理提供考卷文字或圖片，並要求「幫我做成報讀HTML」、「考卷轉TTS」時，AI 會自動將試卷轉換為支援逐句點選、語音朗讀的單頁 HTML 檔案。
+
+GitHub Repo：<https://github.com/chuoneone/exam_to_tts_html>
 
 ## 🌟 核心特色
 1. **單頁無滾動設計 (Compact Layout)**：
@@ -13,22 +15,47 @@
 
 ---
 
-## 🛠️ 安裝與同步方法
-如果您想在**其他電腦**上載入此技能，請按照以下步驟操作：
+## 🛠️ 安裝
 
-1. **複製/克隆專案**：
-   在目標電腦的終端機執行：
-   ```bash
-   # 請先導航至您的 .gemini config 目錄
-   cd C:\Users\<您的電腦用戶名>\.gemini\config\skills\
-   
-   # 複製此 Repo
-   git clone https://github.com/chuoneone/exam_to_tts_html.git
-   ```
-   *(或者您也可以直接將此 `exam_to_tts_html` 資料夾複製並貼至上述路徑。)*
+### Windows PowerShell
 
-2. **確認技能載入**：
-   開啟 AI 助理，AI 將會自動偵測此路徑並載入技能。
+直接貼上執行：
+
+```powershell
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.codex\skills" | Out-Null; git clone https://github.com/chuoneone/exam_to_tts_html.git "$env:USERPROFILE\.codex\skills\exam_to_tts_html"
+```
+
+### macOS / Linux
+
+直接貼上執行：
+
+```bash
+mkdir -p ~/.codex/skills && git clone https://github.com/chuoneone/exam_to_tts_html.git ~/.codex/skills/exam_to_tts_html
+```
+
+安裝後重新開啟 Codex，或開新對話，即可用這個 skill。觸發方式可以說：
+
+```text
+幫我把這份考卷做成報讀HTML
+```
+
+或：
+
+```text
+考卷轉TTS
+```
+
+### 更新已安裝的 skill
+
+```bash
+git -C ~/.codex/skills/exam_to_tts_html pull
+```
+
+Windows PowerShell 可用：
+
+```powershell
+git -C "$env:USERPROFILE\.codex\skills\exam_to_tts_html" pull
+```
 
 ---
 
